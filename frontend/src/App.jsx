@@ -7,10 +7,13 @@ import CityAnswer from './components/CityAnswer.jsx';
 import ActFirst from './components/ActFirst.jsx';
 import Bulletin from './components/Bulletin.jsx';
 import Subscribe from './components/Subscribe.jsx';
+import CityStrip from './components/CityStrip.jsx';
 
 const HOURS_PER_SECOND = 7;
 const REFRESH_MS = 5 * 60 * 1000;
 const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+// Links like ?city=delhi or ?city=delhi&view=replay open straight on that city (used by alert emails and the Share button).
+const START = new URLSearchParams(window.location.search);
 
 function Mark() {
   return (
@@ -39,8 +42,9 @@ export default function App() {
   const stopAt = useRef(48);
 
   // Opening moment: play the next 24 hours of smoke once.
-  const intro = useCallback((s) => {
-    setCitySlug(s?.cities[0]?.slug ?? null);
+  const intro = useCallback((s, preferSlug = null) => {
+    const keep = preferSlug && s?.cities.some((c) => c.slug === preferSlug);
+    setCitySlug(keep ? preferSlug : s?.cities[0]?.slug ?? null);
     setCluster(null);
     if (reducedMotion()) {
       setPlaying(false);
@@ -70,13 +74,23 @@ export default function App() {
     (async () => {
       const [s, r] = await Promise.all([fetchLatest(), loadReplay()]);
       setReplay(r);
-      if (!s && r) setMode('replay');
+      const startReplay = Boolean(r) && (!s || START.get('view') === 'replay');
+      if (startReplay) setMode('replay');
       setLoaded(true);
-      intro(s || r);
+      intro(startReplay ? r : s, START.get('city'));
     })();
     const id = setInterval(fetchLatest, REFRESH_MS);
     return () => clearInterval(id);
   }, [fetchLatest, intro]);
+
+  // Keep the address bar shareable: ?city=<slug>[&view=replay]
+  useEffect(() => {
+    if (!loaded || !citySlug) return;
+    const p = new URLSearchParams(window.location.search);
+    p.set('city', citySlug);
+    if (mode === 'replay') p.set('view', 'replay'); else p.delete('view');
+    window.history.replaceState(null, '', `${window.location.pathname}?${p}${window.location.hash}`);
+  }, [loaded, citySlug, mode]);
 
   const snapshot = mode === 'replay' ? replay : live;
   const switchMode = (m) => {
@@ -118,6 +132,11 @@ export default function App() {
   };
 
   const onSelectCity = (slug) => { setCitySlug(slug); setCluster(null); };
+  // From the city list under the map: on phones the answer sits above the map, so bring it into view.
+  const onPickFromList = (slug) => {
+    onSelectCity(slug);
+    if (window.innerWidth <= 900) document.querySelector('.answer')?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
+  };
 
   if (!loaded) return <main className="state"><p>Loading the latest smoke forecast</p></main>;
   if (!snapshot) {
@@ -167,6 +186,7 @@ export default function App() {
               <li key={l}><span className="key key-city" style={{ background: LEVELS[l].color }} />{LEVELS[l].label}</li>
             ))}
           </ul>
+          <CityStrip cities={snapshot.cities} selected={city.slug} onSelect={onPickFromList} />
         </div>
         <div className="answer-col">
           <CityAnswer snapshot={snapshot} city={city} onSelectCity={onSelectCity} hour={hour} />

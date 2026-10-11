@@ -1,4 +1,4 @@
-﻿# SmokeSignal
+# SmokeSignal
 
 **Know when farm-fire smoke will reach your city, and which fires it is coming from.**
 
@@ -10,6 +10,7 @@ Every October and November, smoke from crop-residue fires in Punjab and Haryana 
 - **From where:** "20% from fires near Sangrur, 19% near Mansa…"
 - **What to act on first:** fire areas ranked by how much smoke they send towards people in the next 24 hours, so enforcement and residue-management teams can go where it matters most today.
 - **Who gets told:** a short English + Hindi bulletin ready to forward, and email alerts to subscribers before the smoke arrives.
+- **What to do:** plain steps for the level of smoke on its way (windows, outdoor activity, N95 masks, people at higher risk). Every city has a shareable link (?city=delhi), and alert emails open straight on it.
 - **Replay:** re-run any past day from the archives (for example a bad November day) to see how SmokeSignal would have warned each city.
 
 It covers 17 cities: Delhi NCR, Chandigarh, Dehradun, Jaipur, Agra, Kanpur and Lucknow downwind, the Punjab and Haryana cities inside the burning belt (Amritsar, Jalandhar, Ludhiana, Patiala, Bathinda, Hisar, Panipat), and Meerut. Fires across the border in Pakistani Punjab are counted as smoke sources, because their smoke reaches Amritsar and Delhi on west winds, but only fires in India are ranked in "fires to act on first".

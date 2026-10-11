@@ -154,7 +154,7 @@ import { shouldAlert, alertSubject, alertMessage } from '../src/lib/alerts.mjs';
 
 test('alerts: moderate/heavy within 24 h, 12 h cooldown unless it gets worse', () => {
   const now = Date.parse('2026-10-10T12:00:00Z');
-  const city = { name: 'Delhi', level24: 'moderate', etaHours: 9, sources: [], peakWindow: { start: 12, end: 18 } };
+  const city = { slug: 'delhi', name: 'Delhi', level24: 'moderate', etaHours: 9, sources: [], peakWindow: { start: 12, end: 18 } };
   assert.equal(shouldAlert(city, null, { now }), true);
   assert.equal(shouldAlert({ ...city, level24: 'low' }, null, { now }), false);
   assert.equal(shouldAlert({ ...city, etaHours: 30 }, null, { now }), false);
@@ -167,7 +167,7 @@ test('alerts: moderate/heavy within 24 h, 12 h cooldown unless it gets worse', (
   const msg = alertMessage({ ...city, airQuality: { pm25: [80, 140, null] } }, { bulletin: { en: 'EN', hi: 'हिंदी' } }, 'https://x.example');
   assert.match(msg, /MODERATE smoke, arriving in about 9 hours \(heaviest 12-18 h from now\)/);
   assert.match(msg, /max next 48 h: 140/);
-  assert.match(msg, /Live map: https:\/\/x.example/);
+  assert.match(msg, /Live map: https:\/\/x\.example\/\?city=delhi$/m);
 });
 
 import { getJson, fetchWindGrid } from '../src/lib/openmeteo.mjs';
@@ -261,9 +261,10 @@ test('fires across the border count as smoke sources but are not ranked for acti
 });
 
 test('replay test alerts are clearly labelled', () => {
-  const city = { name: 'Delhi', level24: 'high', etaHours: 6.3, sources: [], peakWindow: null };
+  const city = { slug: 'delhi', name: 'Delhi', level24: 'high', etaHours: 6.3, sources: [], peakWindow: null };
   const snap = { replay: { date: '2025-11-11' }, bulletin: { en: 'EN', hi: 'HI' } };
   assert.equal(alertSubject(city, snap), '[TEST - replay of 2025-11-11] SmokeSignal: heavy smoke heading to Delhi in ~6 h');
   assert.match(alertMessage(city, snap, ''), /^TEST ALERT: replay of 2025-11-11/);
+  assert.match(alertMessage(city, snap, 'https://x.example/'), /^Replay map: https:\/\/x\.example\/\?city=delhi&view=replay$/m);
   assert.doesNotMatch(alertMessage(city, { bulletin: {} }, ''), /TEST/);
 });

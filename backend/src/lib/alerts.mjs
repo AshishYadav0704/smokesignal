@@ -21,6 +21,11 @@ export function alertSubject(city, snapshot) {
     .slice(0, 99);
 }
 
+/** Opens the app on this city (and on the replay, for a test alert). */
+export function cityLink(appUrl, city, snapshot) {
+  return `${appUrl.replace(/\/+$/, '')}/?city=${encodeURIComponent(city.slug)}${snapshot?.replay ? '&view=replay' : ''}`;
+}
+
 export function alertMessage(city, snapshot, appUrl) {
   const pm = city.airQuality?.pm25?.filter((v) => v != null) ?? [];
   const lines = [
@@ -36,7 +41,7 @@ export function alertMessage(city, snapshot, appUrl) {
     '',
     snapshot.bulletin?.hi ?? '',
     '',
-    appUrl ? `Live map: ${appUrl}` : '',
+    appUrl ? `${snapshot?.replay ? 'Replay map' : 'Live map'}: ${cityLink(appUrl, city, snapshot)}` : '',
     'Forecast estimate from NASA satellite fire detections and forecast winds, not a measurement.',
   ];
   return lines.filter((l, k, a) => l !== '' || (k > 0 && a[k - 1] !== '')).join('\n').trim();
