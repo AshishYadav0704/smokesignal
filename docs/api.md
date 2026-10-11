@@ -1,6 +1,6 @@
 # SmokeSignal API
 
-Base URL: the `ApiUrl` output of the SAM stack, e.g. `https://abc123.execute-api.ap-south-1.amazonaws.com`.
+Base URL: https://mao67tmw8j.execute-api.ap-south-1.amazonaws.com
 
 ## GET /latest
 The latest forecast snapshot. Cached for 60 s.
@@ -41,7 +41,7 @@ The latest forecast snapshot. Cached for 60 s.
 `404` if the pipeline has never run.
 
 ## GET /cities
-The tracked cities: `[{ slug, name, hi, lat, lon, pop }]`.
+The 17 tracked cities: `[{ slug, name, hi, lat, lon, pop }]`.
 
 ## GET /history?city=delhi
 The last 24 runs for one city, newest first: `[{ at, level, level24, etaHours, arrivingFrp }]`.
@@ -55,3 +55,4 @@ Returns `{ "status": "pending_confirmation", "message": "…" }`.
 
 ## POST /run
 Starts the pipeline now. Header `x-admin-key: <AdminKey>` is required. Returns `202 { executionArn }`.
+Last checked against the live API: 11 October
