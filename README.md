@@ -2,6 +2,8 @@
 
 **Know when farm-fire smoke will reach your city, and which fires it is coming from.**
 
+![SmokeSignal replay of 11 November 2025](docs/screenshort.png)
+
 Built for **Environmental Hacks (Bharat Builds Tour, WeMakeDevs × AWS), Track 01: Air.**
 
 Every October and November, smoke from crop-residue fires in Punjab and Haryana drifts across North India. People find out when the sky is already grey. SmokeSignal turns satellite fire detections and wind forecasts into a city-by-city early warning:
