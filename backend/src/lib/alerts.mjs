@@ -11,10 +11,12 @@ export function shouldAlert(city, last, { now = Date.now(), windowHours = 24 } =
   return !recent || RANK[city.level24] > RANK[last.level];
 }
 
+const replayTag = (snapshot) => (snapshot?.replay ? `[TEST - replay of ${snapshot.replay.date}] ` : '');
+
 /** SNS subjects must be ASCII and under 100 characters. */
-export function alertSubject(city) {
+export function alertSubject(city, snapshot) {
   const when = city.etaHours < 1 ? `reaching ${city.name} now` : `heading to ${city.name} in ~${Math.round(city.etaHours)} h`;
-  return `SmokeSignal: ${WORD[city.level24].toLowerCase()} smoke ${when}`
+  return `${replayTag(snapshot)}SmokeSignal: ${WORD[city.level24].toLowerCase()} smoke ${when}`
     .replace(/[^\x20-\x7E]/g, '')
     .slice(0, 99);
 }
@@ -22,6 +24,8 @@ export function alertSubject(city) {
 export function alertMessage(city, snapshot, appUrl) {
   const pm = city.airQuality?.pm25?.filter((v) => v != null) ?? [];
   const lines = [
+    snapshot?.replay ? `TEST ALERT: replay of ${snapshot.replay.date} using archived satellite fires and that day's wind forecast. This is not a current forecast.` : '',
+    snapshot?.replay ? '' : '',
     `Smoke alert for ${city.name} (SmokeSignal)`,
     '',
     `Expected: ${WORD[city.level24]} smoke, ${city.etaHours < 1 ? 'arriving now' : `arriving in about ${Math.round(city.etaHours)} hours`}${city.peakWindow ? ` (heaviest ${city.peakWindow.start}-${city.peakWindow.end} h from now)` : ''}.`,

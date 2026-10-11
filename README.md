@@ -51,6 +51,15 @@ flowchart LR
 
 This is a simplified Lagrangian trajectory model: the same idea as NOAA HYSPLIT trajectories, without dispersion or vertical motion. It estimates **when and from where** smoke arrives, not PM2.5 concentrations. The CAMS PM2.5 forecast is shown alongside as an independent check.
 
+## Case study: 11 November 2025
+
+We replayed the evening of 11 November 2025 (`REPLAY_DATE=2025-11-11`) using only data that existed at the time: 836 archived NASA VIIRS fire detections and the wind forecast issued that day.
+
+- SmokeSignal flags **heavy farm-fire smoke reaching Delhi in about 6 hours** (overnight), mostly from fires near Muktsar, Sangrur and Moga, with Panipat, Noida and Gurugram also heavy.
+- What happened: Delhi's AQI was 428 on 11 November, the season's first "severe" day, and 418 the next day. On 12 November the Decision Support System attributed **22.4% of Delhi's PM2.5 to stubble burning**, the highest share that winter ([Outlook Business, 13 Nov 2025](https://www.outlookbusiness.com/news/delhi-toxic-smog-crop-burning-surge-air-quality)).
+
+One day is a consistency check, not a validation; the next step is to replay every day of the 2024 and 2025 seasons against CPCB station data.
+
 ## AWS services and why
 
 | Service | Job in SmokeSignal |
@@ -146,6 +155,16 @@ To use Bedrock in another region or with another model, pass `BedrockRegion=... 
 
 ### 5. Try an alert
 Subscribe with your email in the app, click **Confirm subscription** in the email from AWS, then run the pipeline. If moderate or heavy smoke is due in your city within 24 h, the alert arrives within a minute.
+
+### 5b. Send a labelled test alert from the replay
+Real alerts only go out when moderate or heavy smoke is due within 24 hours. To see what one looks like on a quiet day, send a test alert built from the replay. Its subject and first line say **TEST, replay of 2025-11-11**, and it does not affect the real 12-hour cooldown. Run from the repo root in PowerShell:
+```powershell
+$BUCKET = aws cloudformation describe-stacks --stack-name smokesignal --query "Stacks[0].Outputs[?OutputKey=='DataBucketName'].OutputValue" --output text
+aws s3 cp frontend\public\replay.json "s3://$BUCKET/replay/replay.json"
+$FN = aws cloudformation describe-stack-resource --stack-name smokesignal --logical-resource-id NotifyFunction --query "StackResourceDetail.PhysicalResourceId" --output text
+Set-Content "$env:TEMP\payload.json" '{"snapshotKey":"replay/replay.json","test":true,"cities":["delhi"]}'
+aws lambda invoke --function-name $FN --payload "file://$env:TEMP\payload.json" "$env:TEMP\out.json"; Get-Content "$env:TEMP\out.json"
+```
 
 ### Cost (built to run free)
 Everything is serverless and scales to zero. On a new AWS account on the **Free plan**:

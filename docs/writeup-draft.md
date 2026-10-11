@@ -16,6 +16,9 @@ SmokeSignal is a live smoke early-warning system for 17 cities across North Indi
 - Anyone can subscribe for email alerts for their city. Alerts go out when moderate or heavy smoke is due within 24 hours.
 - A replay mode re-runs any past day from the archives (fires and the wind forecast issued that day), so you can see how it would have warned each city on a bad November day.
 
+## Does it work? A real day, replayed
+We replayed the evening of 11 November 2025 using only data available then (836 archived NASA fire detections and that day's wind forecast). SmokeSignal flags heavy farm-fire smoke reaching Delhi in about 6 hours, mostly from fires near Muktsar, Sangrur and Moga. In reality Delhi's AQI was 428 that day (the season's first "severe" day) and 418 the next, when the Decision Support System attributed 22.4% of Delhi's PM2.5 to stubble burning, the highest share that winter. One day is a consistency check, not proof; next we will replay the full 2024 and 2025 seasons against CPCB station data.
+
 ## How AWS is used
 - **AWS SAM** defines the whole stack as code.
 - **Amazon EventBridge Scheduler** starts an **AWS Step Functions** pipeline every 3 hours (IST).

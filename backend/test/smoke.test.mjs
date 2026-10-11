@@ -259,3 +259,11 @@ test('fires across the border count as smoke sources but are not ranked for acti
   assert.equal(ind.priority, 1);
   assert.ok(r.cities[0].sources.some((s) => s.region === 'Pakistan'), 'Pakistani smoke still attributed');
 });
+
+test('replay test alerts are clearly labelled', () => {
+  const city = { name: 'Delhi', level24: 'high', etaHours: 6.3, sources: [], peakWindow: null };
+  const snap = { replay: { date: '2025-11-11' }, bulletin: { en: 'EN', hi: 'HI' } };
+  assert.equal(alertSubject(city, snap), '[TEST - replay of 2025-11-11] SmokeSignal: heavy smoke heading to Delhi in ~6 h');
+  assert.match(alertMessage(city, snap, ''), /^TEST ALERT: replay of 2025-11-11/);
+  assert.doesNotMatch(alertMessage(city, { bulletin: {} }, ''), /TEST/);
+});
