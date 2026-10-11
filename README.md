@@ -1,4 +1,4 @@
-# SmokeSignal
+﻿# SmokeSignal
 
 **Know when farm-fire smoke will reach your city, and which fires it is coming from.**
 
@@ -14,7 +14,7 @@ Every October and November, smoke from crop-residue fires in Punjab and Haryana 
 
 It covers 17 cities: Delhi NCR, Chandigarh, Dehradun, Jaipur, Agra, Kanpur and Lucknow downwind, the Punjab and Haryana cities inside the burning belt (Amritsar, Jalandhar, Ludhiana, Patiala, Bathinda, Hisar, Panipat), and Meerut. Fires across the border in Pakistani Punjab are counted as smoke sources, because their smoke reaches Amritsar and Delhi on west winds, but only fires in India are ranked in "fires to act on first".
 
-**Live app:** LIVE_APP_URL
+**Live app:** https://main.d26vsne4rn3qet.amplifyapp.com
 
 ---
 
