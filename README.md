@@ -9,13 +9,12 @@ Every October and November, smoke from crop-residue fires in Punjab and Haryana 
 - **When:** "Heavy smoke reaches Delhi in about 8 hours, heaviest between 02:30 and 08:30."
 - **From where:** "20% from fires near Sangrur, 19% near Mansa…"
 - **What to act on first:** fire areas ranked by how much smoke they send towards people in the next 24 hours, so enforcement and residue-management teams can go where it matters most today.
-- **Who gets told:** an English + Hindi bulletin written by Amazon Bedrock, and email alerts to subscribers before the smoke arrives.
+- **Who gets told:** a short English + Hindi bulletin ready to forward, and email alerts to subscribers before the smoke arrives.
 - **Replay:** re-run any past day from the archives (for example a bad November day) to see how SmokeSignal would have warned each city.
 
 It covers 17 cities: Delhi NCR, Chandigarh, Dehradun, Jaipur, Agra, Kanpur and Lucknow downwind, the Punjab and Haryana cities inside the burning belt (Amritsar, Jalandhar, Ludhiana, Patiala, Bathinda, Hisar, Panipat), and Meerut. Fires across the border in Pakistani Punjab are counted as smoke sources, because their smoke reaches Amritsar and Delhi on west winds, but only fires in India are ranked in "fires to act on first".
 
-![SmokeSignal screenshot (sample data)](docs/screenshot-sample-data.png)
-*Screenshot with synthetic sample data. Replace with a screenshot of the live deployment.*
+**Live app:** LIVE_APP_URL
 
 ---
 
@@ -93,7 +92,7 @@ backend/
   scripts/run-local.mjs      run the whole pipeline locally with real data
   scripts/make-mock.mjs      synthetic data for frontend development
 frontend/                    React + Vite app (map drawn with canvas + SVG, no map library)
-docs/                        API, demo script, writeup draft, team plan
+docs/api.md                  API reference
 amplify.yml                  Amplify Hosting build settings
 ```
 
@@ -177,7 +176,7 @@ Set up a zero-spend AWS Budget anyway. When you are done, `sam delete` removes e
 
 See [docs/api.md](docs/api.md). `GET /latest`, `GET /cities`, `GET /history?city=delhi`, `POST /subscribe`, `POST /run` (admin).
 
-## Limitations (honest list)
+## Limitations
 
 - Smoke arrival is a **trajectory estimate**, not a measured concentration. There is no plume rise, dispersion or chemistry. Levels are relative thresholds on fire-power arriving, documented in `smoke.mjs`.
 - VIIRS sees fires at satellite overpasses (around 01:30 and 13:30 local time), and misses fires under thick cloud or smoke.
@@ -188,16 +187,12 @@ See [docs/api.md](docs/api.md). `GET /latest`, `GET /cities`, `GET /history?city
 
 ## Team
 
-| Member | Built |
+| Member | GitHub |
 |---|---|
-| _Name (GitHub)_ | _e.g. AWS infrastructure, SAM, Step Functions_ |
-| _Name (GitHub)_ | _e.g. smoke model and tests_ |
-| _Name (GitHub)_ | _e.g. frontend and map_ |
-| _Name (GitHub)_ | _e.g. Bedrock bulletin, alerts, demo video_ |
-
-## AI tools used
-
-_List every tool the team used (hackathon rule), e.g. Claude (Anthropic) for code generation and design, ChatGPT for planning._
+| Ashish Kumar Yadav (team leader) | [@AshishYadav0704](https://github.com/AshishYadav0704) |
+| Sahil Kumar Singh | [@Sahilgggg](https://github.com/Sahilgggg) |
+| Sonu Kumar | [@sonukumar8789217](https://github.com/sonukumar8789217) |
+| Umang Yadav | [@umang-yadav-123](https://github.com/umang-yadav-123) |
 
 ## Data and credits
 

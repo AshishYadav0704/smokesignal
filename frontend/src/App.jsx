@@ -188,7 +188,7 @@ export default function App() {
             <li>Every 3 hours, NASA FIRMS fire detections from the VIIRS satellites over Punjab, Haryana and nearby areas are grouped into clusters of about {snapshot.params.clusterKm} km, weighted by fire radiative power.</li>
             <li>Smoke from each cluster is released now and over the next 6 hours, then moved with the 48-hour wind forecast at {snapshot.windLevel}, roughly where the smoke travels.</li>
             <li>Smoke weakens as it travels (half-life about {Math.round(snapshot.params.decayHours * Math.LN2)} hours). Smoke passing within {snapshot.params.arrivalKm} km of a city counts as arriving there.</li>
-            <li>Amazon Bedrock writes the bulletin from these numbers. Alerts go out through Amazon SNS.</li>
+            <li>The bulletin is written from these numbers, by Amazon Bedrock when it is available and from a built-in template otherwise. Alerts go out through Amazon SNS.</li>
           </ol>
           <p>This estimates when and from where smoke arrives. It is not a pollution measurement; the CAMS PM2.5 forecast is shown as an independent check. Data: NASA FIRMS, Open-Meteo, CAMS.</p>
         </details>
