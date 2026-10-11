@@ -1,0 +1,15 @@
+{
+  "name": "smokesignal-backend",
+  "version": "1.0.0",
+  "private": true,
+  "description": "SmokeSignal backend: smoke-transport engine + AWS SAM app",
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "local": "node scripts/run-local.mjs",
+    "mock": "node scripts/make-mock.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}

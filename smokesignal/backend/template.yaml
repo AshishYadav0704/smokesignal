@@ -1,0 +1,255 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  SmokeSignal - stubble-smoke early warning for North India.
+  NASA FIRMS fires + Open-Meteo winds -> smoke trajectories -> city ETAs, Bedrock bulletins, SNS alerts.
+
+Parameters:
+  FirmsMapKey:
+    Type: String
+    NoEcho: true
+    Description: NASA FIRMS MAP_KEY (free from https://firms.modaps.eosdis.nasa.gov/api/map_key/)
+  AdminKey:
+    Type: String
+    NoEcho: true
+    MinLength: 8
+    Description: Secret for POST /run (any long random string you choose)
+  BedrockRegion:
+    Type: String
+    Default: us-east-1
+    Description: Region to call Amazon Bedrock in
+  BedrockModelId:
+    Type: String
+    Default: amazon.nova-lite-v1:0
+    Description: Bedrock model or inference profile ID for the bulletin
+  WindLevel:
+    Type: String
+    Default: 925hPa
+    AllowedValues: [10m, 80m, 120m, 180m, 975hPa, 950hPa, 925hPa, 900hPa, 850hPa]
+    Description: Wind level smoke is carried by (925hPa is about 500 m above the Punjab plains)
+  AppUrl:
+    Type: String
+    Default: ''
+    Description: Public URL of the frontend, shown in alert emails
+  ScheduleState:
+    Type: String
+    Default: ENABLED
+    AllowedValues: [ENABLED, DISABLED]
+
+Globals:
+  Function:
+    Runtime: nodejs22.x
+    Architectures: [arm64]
+    CodeUri: src/
+    MemorySize: 512
+    Timeout: 60
+    Tracing: Active
+    Environment:
+      Variables:
+        DATA_BUCKET: !Ref DataBucket
+        TABLE_NAME: !Ref Table
+
+Resources:
+  # ---------- storage ----------
+  DataBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-old-runs
+            Status: Enabled
+            Prefix: runs/
+            ExpirationInDays: 14
+
+  Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - { AttributeName: pk, AttributeType: S }
+        - { AttributeName: sk, AttributeType: S }
+      KeySchema:
+        - { AttributeName: pk, KeyType: HASH }
+        - { AttributeName: sk, KeyType: RANGE }
+      TimeToLiveSpecification:
+        AttributeName: ttl
+        Enabled: true
+
+  AlertsTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: SmokeSignal
+
+  # ---------- pipeline functions ----------
+  FetchFiresFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: NASA FIRMS fire detections -> S3
+      Handler: handlers/fetchFires.handler
+      Timeout: 90
+      Environment:
+        Variables:
+          FIRMS_MAP_KEY: !Ref FirmsMapKey
+      Policies:
+        - S3CrudPolicy: { BucketName: !Ref DataBucket }
+
+  FetchWindFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: 48 h wind forecast grid -> S3
+      Handler: handlers/fetchWind.handler
+      Timeout: 120
+      Environment:
+        Variables:
+          WIND_LEVEL: !Ref WindLevel
+      Policies:
+        - S3CrudPolicy: { BucketName: !Ref DataBucket }
+
+  FetchAirQualityFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: CAMS PM2.5 forecast per city -> S3
+      Handler: handlers/fetchAirQuality.handler
+      Policies:
+        - S3CrudPolicy: { BucketName: !Ref DataBucket }
+
+  SimulateFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Smoke trajectory model -> snapshot in S3, history in DynamoDB
+      Handler: handlers/simulate.handler
+      MemorySize: 1024
+      Timeout: 120
+      Policies:
+        - S3CrudPolicy: { BucketName: !Ref DataBucket }
+        - DynamoDBCrudPolicy: { TableName: !Ref Table }
+
+  BulletinFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Amazon Bedrock English + Hindi bulletin, publishes LATEST
+      Handler: handlers/bulletin.handler
+      Environment:
+        Variables:
+          BEDROCK_REGION: !Ref BedrockRegion
+          BEDROCK_MODEL_ID: !Ref BedrockModelId
+      Policies:
+        - S3CrudPolicy: { BucketName: !Ref DataBucket }
+        - DynamoDBCrudPolicy: { TableName: !Ref Table }
+        - Statement:
+            - Effect: Allow
+              Action: [bedrock:InvokeModel]
+              Resource: '*'
+
+  NotifyFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: SNS email alerts for cities with smoke arriving within 24 h
+      Handler: handlers/notify.handler
+      Environment:
+        Variables:
+          TOPIC_ARN: !Ref AlertsTopic
+          APP_URL: !Ref AppUrl
+      Policies:
+        - S3ReadPolicy: { BucketName: !Ref DataBucket }
+        - DynamoDBCrudPolicy: { TableName: !Ref Table }
+        - SNSPublishMessagePolicy: { TopicName: !GetAtt AlertsTopic.TopicName }
+
+  # ---------- orchestration: every 3 hours ----------
+  PipelineStateMachine:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      DefinitionUri: statemachine/pipeline.asl.json
+      DefinitionSubstitutions:
+        FetchFiresArn: !GetAtt FetchFiresFunction.Arn
+        FetchWindArn: !GetAtt FetchWindFunction.Arn
+        FetchAirQualityArn: !GetAtt FetchAirQualityFunction.Arn
+        SimulateArn: !GetAtt SimulateFunction.Arn
+        BulletinArn: !GetAtt BulletinFunction.Arn
+        NotifyArn: !GetAtt NotifyFunction.Arn
+      Tracing:
+        Enabled: true
+      Policies:
+        - LambdaInvokePolicy: { FunctionName: !Ref FetchFiresFunction }
+        - LambdaInvokePolicy: { FunctionName: !Ref FetchWindFunction }
+        - LambdaInvokePolicy: { FunctionName: !Ref FetchAirQualityFunction }
+        - LambdaInvokePolicy: { FunctionName: !Ref SimulateFunction }
+        - LambdaInvokePolicy: { FunctionName: !Ref BulletinFunction }
+        - LambdaInvokePolicy: { FunctionName: !Ref NotifyFunction }
+        - Statement:
+            - Effect: Allow
+              Action: [xray:PutTraceSegments, xray:PutTelemetryRecords, xray:GetSamplingRules, xray:GetSamplingTargets]
+              Resource: '*'
+      Events:
+        EveryThreeHours:
+          Type: ScheduleV2
+          Properties:
+            ScheduleExpression: cron(15 0/3 * * ? *)
+            ScheduleExpressionTimezone: Asia/Kolkata
+            State: !Ref ScheduleState
+            Input: '{}'
+
+  # ---------- public API ----------
+  HttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins: ['*']
+        AllowMethods: [GET, POST, OPTIONS]
+        AllowHeaders: [content-type, x-admin-key]
+        MaxAge: 600
+      DefaultRouteSettings:
+        ThrottlingBurstLimit: 50
+        ThrottlingRateLimit: 20
+
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: SmokeSignal public API
+      Handler: handlers/api.handler
+      Timeout: 20
+      Environment:
+        Variables:
+          TOPIC_ARN: !Ref AlertsTopic
+          STATE_MACHINE_ARN: !Ref PipelineStateMachine
+          ADMIN_KEY: !Ref AdminKey
+      Policies:
+        - S3ReadPolicy: { BucketName: !Ref DataBucket }
+        - DynamoDBCrudPolicy: { TableName: !Ref Table }
+        - StepFunctionsExecutionPolicy: { StateMachineName: !GetAtt PipelineStateMachine.Name }
+        - Statement:
+            - Effect: Allow
+              Action: [sns:Subscribe]
+              Resource: !Ref AlertsTopic
+      Events:
+        Latest:
+          Type: HttpApi
+          Properties: { ApiId: !Ref HttpApi, Path: /latest, Method: GET }
+        Cities:
+          Type: HttpApi
+          Properties: { ApiId: !Ref HttpApi, Path: /cities, Method: GET }
+        History:
+          Type: HttpApi
+          Properties: { ApiId: !Ref HttpApi, Path: /history, Method: GET }
+        Subscribe:
+          Type: HttpApi
+          Properties: { ApiId: !Ref HttpApi, Path: /subscribe, Method: POST }
+        Run:
+          Type: HttpApi
+          Properties: { ApiId: !Ref HttpApi, Path: /run, Method: POST }
+
+Outputs:
+  ApiUrl:
+    Description: Put this in the frontend as VITE_API_URL
+    Value: !Sub https://${HttpApi}.execute-api.${AWS::Region}.amazonaws.com
+  StateMachineArn:
+    Value: !Ref PipelineStateMachine
+  AlertsTopicArn:
+    Value: !Ref AlertsTopic
+  DataBucketName:
+    Value: !Ref DataBucket

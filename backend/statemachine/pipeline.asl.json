@@ -1,0 +1,106 @@
+{
+  "Comment": "SmokeSignal: fetch fires, winds and air quality in parallel -> simulate smoke transport -> Bedrock bulletin -> SNS alerts",
+  "StartAt": "Init",
+  "States": {
+    "Init": {
+      "Type": "Pass",
+      "Parameters": {
+        "runId.$": "$$.Execution.Name",
+        "startedAt.$": "$$.Execution.StartTime"
+      },
+      "Next": "Gather data"
+    },
+    "Gather data": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Fetch NASA fires",
+          "States": {
+            "Fetch NASA fires": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": { "FunctionName": "${FetchFiresArn}", "Payload.$": "$" },
+              "OutputPath": "$.Payload",
+              "Retry": [
+                { "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"], "IntervalSeconds": 2, "MaxAttempts": 3, "BackoffRate": 2 },
+                { "ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 30, "MaxAttempts": 2, "BackoffRate": 2 }
+              ],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Fetch wind forecast",
+          "States": {
+            "Fetch wind forecast": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": { "FunctionName": "${FetchWindArn}", "Payload.$": "$" },
+              "OutputPath": "$.Payload",
+              "Retry": [
+                { "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"], "IntervalSeconds": 2, "MaxAttempts": 3, "BackoffRate": 2 },
+                { "ErrorEquals": ["States.TaskFailed"], "IntervalSeconds": 30, "MaxAttempts": 2, "BackoffRate": 2 }
+              ],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Fetch air quality",
+          "States": {
+            "Fetch air quality": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "Parameters": { "FunctionName": "${FetchAirQualityArn}", "Payload.$": "$" },
+              "OutputPath": "$.Payload",
+              "Retry": [
+                { "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"], "IntervalSeconds": 2, "MaxAttempts": 3, "BackoffRate": 2 }
+              ],
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Simulate smoke transport"
+    },
+    "Simulate smoke transport": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": {
+        "FunctionName": "${SimulateArn}",
+        "Payload": {
+          "runId.$": "$[0].runId",
+          "startedAt.$": "$[0].startedAt",
+          "firesKey.$": "$[0].key",
+          "windKey.$": "$[1].key",
+          "aqKey.$": "$[2].key"
+        }
+      },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        { "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"], "IntervalSeconds": 2, "MaxAttempts": 3, "BackoffRate": 2 }
+      ],
+      "Next": "Write bulletin with Bedrock"
+    },
+    "Write bulletin with Bedrock": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": { "FunctionName": "${BulletinArn}", "Payload.$": "$" },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        { "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"], "IntervalSeconds": 2, "MaxAttempts": 3, "BackoffRate": 2 }
+      ],
+      "Next": "Send city alerts"
+    },
+    "Send city alerts": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "Parameters": { "FunctionName": "${NotifyArn}", "Payload.$": "$" },
+      "OutputPath": "$.Payload",
+      "Retry": [
+        { "ErrorEquals": ["Lambda.ServiceException", "Lambda.AWSLambdaException", "Lambda.SdkClientException", "Lambda.TooManyRequestsException"], "IntervalSeconds": 2, "MaxAttempts": 3, "BackoffRate": 2 }
+      ],
+      "End": true
+    }
+  }
+}

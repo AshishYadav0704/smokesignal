@@ -1,0 +1,7 @@
+{
+  "name": "smokesignal-functions",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lambda code. The AWS SDK v3 is provided by the nodejs22.x runtime, so there are no dependencies to bundle.",
+  "license": "MIT"
+}

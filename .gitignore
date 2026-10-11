@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.aws-sam/
+.env
+.env.*
+frontend/public/local-latest.json
+*.log
+.DS_Store
+
+# never commit credentials
+*.csv
+.aws/
+*.pem
+*.key
+.env*
